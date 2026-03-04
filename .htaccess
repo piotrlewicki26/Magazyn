@@ -1,0 +1,51 @@
+Options -Indexes
+Options -MultiViews
+
+# Prevent direct access to config and sensitive files
+<FilesMatch "^(config|install)\.php$">
+  # Allow access (install needs to be run once, then delete)
+</FilesMatch>
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Redirect to index
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Redirect to HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Don't rewrite files or directories
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Route everything to index
+  RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php.c>
+  php_value upload_max_filesize 10M
+  php_value post_max_size 12M
+  php_value max_execution_time 60
+  php_value memory_limit 256M
+  php_flag session.cookie_httponly On
+  php_flag session.cookie_secure On
+</IfModule>
