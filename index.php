@@ -2,6 +2,12 @@
 
 session_start();
 
+// ── Pierwsze uruchomienie — przekieruj do kreatora konfiguracji ──
+if (!file_exists(__DIR__ . '/.env')) {
+    header('Location: /setup.php');
+    exit;
+}
+
 // ── DEBUG: ?reset=1 czyści sesję (tymczasowe) ────────────────
 if(isset($_GET['reset'])) { session_destroy(); header('Location: /'); exit; }
 
@@ -26,9 +32,23 @@ function requireAuth() {
 //  FleetLink GPS — Magazyn + Generator Ofert
 //  Plik: index.php  |  Baza: gsibwndbiu_magazyn_gps
 // ══════════════════════════════════════════════════════════════════
-$DSN  = 'mysql:host=localhost;dbname=gsibwndbiu_magazyn_gps;charset=utf8mb4';
-$DB_U = 'gsibwndbiu_magazyn_gps';
-$DB_P = 'TkOhZj1B[O3-_m]-';
+
+// Załaduj zmienne środowiskowe z pliku .env
+$lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+foreach ($lines as $line) {
+    $trimmed = trim($line);
+    if ($trimmed === '' || $trimmed[0] === '#') continue;
+    if (strpos($trimmed, '=') === false) continue;
+    [$envKey, $envVal] = explode('=', $trimmed, 2);
+    $envKey = trim($envKey);
+    // Strip inline comments (e.g. VALUE=foo # comment)
+    $envVal = trim(preg_replace('/#.*$/', '', $envVal));
+    if ($envKey !== '') $_ENV[$envKey] = $envVal;
+}
+
+$DSN  = 'mysql:host=' . ($_ENV['DB_HOST'] ?? 'localhost') . ';dbname=' . ($_ENV['DB_NAME'] ?? '') . ';charset=' . ($_ENV['DB_CHARSET'] ?? 'utf8mb4');
+$DB_U = $_ENV['DB_USER'] ?? '';
+$DB_P = $_ENV['DB_PASS'] ?? '';
 
 function db() {
     static $pdo;
@@ -1846,9 +1866,9 @@ if(!$logged):
       <div class="fl-login-sub">Magazyn urządzeń GPS — Panel logowania</div>
     </div>
     <div class="fl-login-field">
-      <label class="fl-login-label">Login</label>
+      <label class="fl-login-label">Email / Login</label>
       <input class="fl-login-input" id="fl-login-input" type="text"
-             placeholder="Wpisz login" autocomplete="username"
+             placeholder="Wpisz email lub login" autocomplete="username"
              onkeydown="if(event.key==='Enter') document.getElementById('fl-pass-input').focus()">
     </div>
     <div class="fl-login-field">

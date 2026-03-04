@@ -1,0 +1,6 @@
+.env
+.env.local
+config_local.php
+*.log
+vendor/
+node_modules/

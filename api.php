@@ -3,6 +3,10 @@
 //  api.php — obsługa wszystkich ?api= zapytań
 // ═══════════════════════════════════════════════
 
+require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+
 function handleApi(): void {
     header('Content-Type: application/json; charset=utf-8');
     $action = trim($_GET['api'] ?? '');
@@ -82,14 +86,6 @@ function handleApi(): void {
         }
 
         // ── Zmiana roli użytkownika ───────────────
-        // ── Diagnostyka struktury tabeli ─────────
-        if ($action === 'dbinfo') {
-            $cols = [];
-            foreach ($db->query("SHOW COLUMNS FROM users") as $r) $cols[] = $r;
-            $sample = $db->query("SELECT * FROM users LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-            echo json_encode(['ok'=>true,'columns'=>$cols,'sample'=>$sample]);
-            return;
-        }
 
         // ── Tylko zmiana roli — czyta z GET żeby ominąć php://input ─
         if ($action === 'save_role') {
@@ -173,7 +169,8 @@ function handleApi(): void {
             if (!is_array($data)) { echo json_encode(['ok'=>false,'error'=>'Brak danych']); return; }
             $pwdHash = '';
             if (!empty($data['password'])) {
-                if (strlen($data['password']) < 6) { echo json_encode(['ok'=>false,'error'=>'Hasło min. 6 znaków']); return; }
+                $pwdErrors = validatePassword($data['password']);
+                if (!empty($pwdErrors)) { echo json_encode(['ok'=>false,'error'=>implode(', ', $pwdErrors)]); return; }
                 $pwdHash = password_hash($data['password'], PASSWORD_BCRYPT);
             }
             [$cols,$extra] = buildUserInsert($db);
@@ -212,7 +209,8 @@ function handleApi(): void {
 
             // 3. Hasło jeśli podano
             if (!empty($data['password'])) {
-                if (strlen($data['password']) < 6) { echo json_encode(['ok'=>false,'error'=>'Hasło min. 6 znaków']); return; }
+                $pwdErrors = validatePassword($data['password']);
+                if (!empty($pwdErrors)) { echo json_encode(['ok'=>false,'error'=>implode(', ', $pwdErrors)]); return; }
                 $db->prepare("UPDATE users SET password_hash=? WHERE id=?")
                    ->execute([password_hash($data['password'], PASSWORD_BCRYPT), $uid]);
             }
@@ -265,23 +263,17 @@ function handleApi(): void {
             $nazwisko = trim($data['nazwisko'] ?? '');
             $email    = strtolower(trim($data['email'] ?? ''));
             $telefon  = trim($data['telefon']  ?? '');
-            $rola     = trim($data['rola']     ?? '');
-            $allowed  = ['Administrator','Użytkownik','Serwisant','Kierownik','Tylko odczyt'];
             if (!$email) { echo json_encode(['ok'=>false,'error'=>'Email jest wymagany']); return; }
 
-            if ($rola && in_array($rola, $allowed)) {
-                $db->prepare("UPDATE users SET imie=?,nazwisko=?,email=?,telefon=?,rola=? WHERE id=?")
-                   ->execute([$imie,$nazwisko,$email,$telefon,$rola,$uid]);
-                $_SESSION['auth_user'] = array_merge($_SESSION['auth_user'],
-                    ['imie'=>$imie,'nazwisko'=>$nazwisko,'email'=>$email,'rola'=>$rola,'telefon'=>$telefon]);
-            } else {
-                $db->prepare("UPDATE users SET imie=?,nazwisko=?,email=?,telefon=? WHERE id=?")
-                   ->execute([$imie,$nazwisko,$email,$telefon,$uid]);
-                $_SESSION['auth_user'] = array_merge($_SESSION['auth_user'],
-                    ['imie'=>$imie,'nazwisko'=>$nazwisko,'email'=>$email,'telefon'=>$telefon]);
-            }
+            // Użytkownik NIE może zmieniać własnej roli — tylko admin może (przez users_edit)
+            $db->prepare("UPDATE users SET imie=?,nazwisko=?,email=?,telefon=? WHERE id=?")
+               ->execute([$imie,$nazwisko,$email,$telefon,$uid]);
+            $_SESSION['auth_user'] = array_merge($_SESSION['auth_user'],
+                ['imie'=>$imie,'nazwisko'=>$nazwisko,'email'=>$email,'telefon'=>$telefon]);
+
             if (!empty($data['password'])) {
-                if (strlen($data['password']) < 6) { echo json_encode(['ok'=>false,'error'=>'Hasło min. 6 znaków']); return; }
+                $pwdErrors = validatePassword($data['password']);
+                if (!empty($pwdErrors)) { echo json_encode(['ok'=>false,'error'=>implode(', ', $pwdErrors)]); return; }
                 if (!empty($data['current_password'])) {
                     $st = $db->prepare("SELECT password_hash FROM users WHERE id=?");
                     $st->execute([$uid]); $row = $st->fetch();
@@ -303,7 +295,8 @@ function handleApi(): void {
             if (!isAdmin()) { echo json_encode(['ok'=>false,'error'=>'Brak uprawnień']); return; }
             if (!is_array($data)||empty($data['id'])) { echo json_encode(['ok'=>false,'error'=>'Brak id']); return; }
             $np = $data['new_password'] ?? '';
-            if (strlen($np) < 6) { echo json_encode(['ok'=>false,'error'=>'Hasło min. 6 znaków']); return; }
+            $pwdErrors = validatePassword($np);
+            if (!empty($pwdErrors)) { echo json_encode(['ok'=>false,'error'=>implode(', ', $pwdErrors)]); return; }
             if (!empty($data['current_password'])) {
                 $st = $db->prepare("SELECT password_hash FROM users WHERE id=?");
                 $st->execute([(int)$data['id']]); $row = $st->fetch();
@@ -440,10 +433,20 @@ function handleApi(): void {
         echo json_encode(['ok'=>false,'error'=>'Nieznana akcja: '.$action]);
 
     } catch (PDOException $e) {
-        echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
+        echo json_encode(['ok'=>false,'error'=>'Błąd serwera']);
     }
 }
 
 function saveUndo(string $type, string $label, array $rows, array $newIds=[]): void {
     $_SESSION['undo'] = ['type'=>$type,'label'=>$label,'rows'=>$rows,'new_ids'=>$newIds,'ts'=>time()];
+}
+
+// ── Punkt wejścia ────────────────────────────────
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    if (isset($_GET['api'])) {
+        handleApi();
+    } else {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'Brak parametru api']);
+    }
 }
