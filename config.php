@@ -3,14 +3,30 @@
 //  config.php — połączenie z bazą + schemat
 // ═══════════════════════════════════════════════
 
-define('DB_HOST',    'localhost');
-define('DB_NAME',    'gsibwndbiu_magazyn_gps');
-define('DB_USER',    'gsibwndbiu_magazyn_gps');
-define('DB_PASS',    'TkOhZj1B[O3-_m]-');
-define('DB_CHARSET', 'utf8mb4');
+// Załaduj zmienne środowiskowe z pliku .env (jeśli istnieje)
+if (file_exists(__DIR__ . '/.env')) {
+    $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === '' || $trimmed[0] === '#') continue;
+        if (strpos($trimmed, '=') === false) continue;
+        [$key, $value] = explode('=', $trimmed, 2);
+        $key   = trim($key);
+        // Strip inline comments (e.g. VALUE=foo # comment)
+        $value = trim(preg_replace('/#.*$/', '', $value));
+        if ($key !== '') $_ENV[$key] = $value;
+    }
+}
 
-define('ADMIN_EMAIL',    'admin@fleetlink.pl');
-define('ADMIN_PASSWORD', 'w25731');
+define('DB_HOST',    $_ENV['DB_HOST']    ?? 'localhost');
+define('DB_NAME',    $_ENV['DB_NAME']    ?? '');
+define('DB_USER',    $_ENV['DB_USER']    ?? '');
+define('DB_PASS',    $_ENV['DB_PASS']    ?? '');
+define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? 'utf8mb4');
+
+define('ADMIN_EMAIL',    $_ENV['ADMIN_EMAIL']    ?? '');
+define('ADMIN_PASSWORD', $_ENV['ADMIN_PASSWORD'] ?? '');
+define('SECRET_KEY',     $_ENV['SECRET_KEY']     ?? '');
 
 function getDB(): PDO {
     static $pdo = null;

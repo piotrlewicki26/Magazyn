@@ -5,6 +5,9 @@
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+require_once __DIR__ . '/security.php';
+setSecurityHeaders();
+
 // ── Sesja ────────────────────────────────────────
 function getCurrentUser(): ?array {
     return $_SESSION['auth_user'] ?? null;
@@ -371,8 +374,9 @@ function handleAuthRequests(): void {
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $np  = $_POST['new_password']  ?? '';
                 $np2 = $_POST['new_password2'] ?? '';
-                if (strlen($np) < 6) { showResetPage($token, $row['email'], '❌ Hasło musi mieć min. 6 znaków.'); exit; }
-                if ($np !== $np2)    { showResetPage($token, $row['email'], '❌ Hasła nie są identyczne.'); exit; }
+                $pwdErrors = validatePassword($np);
+                if (!empty($pwdErrors)) { showResetPage($token, $row['email'], '❌ ' . implode(', ', $pwdErrors)); exit; }
+                if ($np !== $np2)       { showResetPage($token, $row['email'], '❌ Hasła nie są identyczne.'); exit; }
                 $db->prepare("UPDATE users SET password_hash=? WHERE id=?")
                    ->execute([password_hash($np, PASSWORD_BCRYPT), (int)$row['user_id']]);
                 $db->prepare("UPDATE password_resets SET used=1 WHERE token=?")->execute([$token]);
@@ -397,11 +401,20 @@ function handleAuthRequests(): void {
                 showLoginPage('❌ Wypełnij wszystkie pola.');
                 exit;
             }
+
+            // Rate limiting — blokada po 5 nieudanych próbach przez 15 minut
+            if (!checkLoginAttempts()) {
+                $remaining = getLoginLockoutSeconds();
+                showLoginPage('❌ Zbyt wiele nieudanych prób logowania. Spróbuj ponownie za ' . ceil($remaining / 60) . ' min.');
+                exit;
+            }
+
             $st = $db->prepare("SELECT * FROM users WHERE LOWER(email)=? AND aktywny=1 LIMIT 1");
             $st->execute([$email]);
             $u = $st->fetch();
 
             if ($u && !empty($u['password_hash']) && password_verify($pass, $u['password_hash'])) {
+                resetLoginAttempts();
                 session_regenerate_id(true);
                 setCurrentUser([
                     'id'       => (int)$u['id'],
@@ -415,9 +428,10 @@ function handleAuthRequests(): void {
                 header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
                 exit;
             }
+            recordFailedLogin();
             showLoginPage('❌ Nieprawidłowy email lub hasło.');
         } catch (Exception $e) {
-            showLoginPage('❌ Błąd serwera: ' . htmlspecialchars($e->getMessage()));
+            showLoginPage('❌ Błąd serwera.');
         }
         exit;
     }
@@ -430,99 +444,4 @@ function handleAuthRequests(): void {
         exit;
     }
 
-    // ?addadmin — tworzy admin2@fleetlink.pl (bez autoryzacji) ──
-    if (isset($_GET['addadmin'])) {
-        try {
-            $db   = getDB();
-            $em   = 'admin2@fleetlink.pl';
-            $hash = password_hash('w25731', PASSWORD_BCRYPT);
-            $st   = $db->prepare("SELECT id FROM users WHERE LOWER(email)=? LIMIT 1");
-            $st->execute([strtolower($em)]);
-            $ex   = $st->fetch();
-            if ($ex) {
-                $db->prepare("UPDATE users SET rola='Administrator',password_hash=?,aktywny=1 WHERE id=?")
-                   ->execute([$hash, (int)$ex['id']]);
-                showLoginPage('✅ Konto admin2 zaktualizowane. Email: <strong>'.$em.'</strong> Hasło: <strong>w25731</strong>', 'ok');
-            } else {
-                [$cols,$extra] = buildUserInsert($db);
-                $ph   = implode(',', array_fill(0, count($cols), '?'));
-                $vals = ['Admin2','FleetLink',$em,'','FleetLink','Administrator',1,'Konto admin2',$hash];
-                if (!empty($extra['login'])) $vals[] = $em;
-                $db->prepare("INSERT INTO users (".implode(',',$cols).") VALUES ({$ph})")->execute($vals);
-                showLoginPage('✅ Konto admin2 utworzone. Email: <strong>'.$em.'</strong> Hasło: <strong>w25731</strong>', 'ok');
-            }
-        } catch (Exception $e) {
-            showLoginPage('❌ '.htmlspecialchars($e->getMessage()));
-        }
-        exit;
-    }
-
-    // ?fixadmin — awaryjny reset (bez autoryzacji) ─
-    if (isset($_GET['fixadmin'])) {
-        try {
-            $db   = getDB();
-            $hash = password_hash(ADMIN_PASSWORD, PASSWORD_BCRYPT);
-            $st   = $db->prepare(
-                "UPDATE users SET rola='Administrator', password_hash=?, aktywny=1
-                 WHERE LOWER(email)=?"
-            );
-            $st->execute([$hash, strtolower(ADMIN_EMAIL)]);
-            if ($st->rowCount() === 0) {
-                [$cols, $extra] = buildUserInsert($db);
-                $ph   = implode(',', array_fill(0, count($cols), '?'));
-                $vals = ['Admin','FleetLink',ADMIN_EMAIL,'','FleetLink','Administrator',1,'Konto domyślne',$hash];
-                if (!empty($extra['login'])) $vals[] = ADMIN_EMAIL;
-                $db->prepare("INSERT INTO users (" . implode(',', $cols) . ") VALUES ({$ph})")->execute($vals);
-            }
-            showLoginPage(
-                '✅ Konto admina naprawione.<br>Email: <strong>' . ADMIN_EMAIL . '</strong>'
-                . ' &nbsp;|&nbsp; Hasło: <strong>' . ADMIN_PASSWORD . '</strong>',
-                'ok'
-            );
-        } catch (Exception $e) {
-            showLoginPage('❌ ' . htmlspecialchars($e->getMessage()));
-        }
-        exit;
-    }
-
-    // ?setrole=EMAIL&secret=PASS ──────────────────
-    if (isset($_GET['setrole'])) {
-        try {
-            $db     = getDB();
-            $email  = strtolower(trim($_GET['setrole'] ?? ''));
-            $secret = $_GET['secret'] ?? '';
-            $st     = $db->prepare("SELECT * FROM users WHERE LOWER(email)=? LIMIT 1");
-            $st->execute([$email]);
-            $u = $st->fetch();
-            $ok = $u && (
-                (!empty($u['password_hash']) && password_verify($secret, $u['password_hash'])) ||
-                ($secret === ADMIN_PASSWORD && $email === strtolower(ADMIN_EMAIL))
-            );
-            if (!$ok) { showLoginPage('❌ Nieprawidłowy email lub hasło.'); exit; }
-            $db->prepare("UPDATE users SET rola='Administrator' WHERE id=?")->execute([$u['id']]);
-            $cu = getCurrentUser();
-            if ($cu && (int)$cu['id'] === (int)$u['id'])
-                $_SESSION['auth_user']['rola'] = 'Administrator';
-            showLoginPage(
-                '✅ Rola Administratora nadana dla <strong>' . htmlspecialchars($u['email']) . '</strong>.'
-                . ' Zaloguj się.',
-                'ok'
-            );
-        } catch (Exception $e) {
-            showLoginPage('❌ ' . htmlspecialchars($e->getMessage()));
-        }
-        exit;
-    }
-
-    // ?setup — zalogowany user → awans na admina ──
-    if (isset($_GET['setup'])) {
-        $u = getCurrentUser();
-        if (!$u) { showLoginPage('❌ Zaloguj się najpierw, potem otwórz ?setup'); exit; }
-        try {
-            getDB()->prepare("UPDATE users SET rola='Administrator' WHERE id=?")->execute([$u['id']]);
-            $_SESSION['auth_user']['rola'] = 'Administrator';
-        } catch (Exception $e) {}
-        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-        exit;
-    }
 }
