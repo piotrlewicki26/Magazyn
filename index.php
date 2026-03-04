@@ -2,6 +2,12 @@
 
 session_start();
 
+// ── Pierwsze uruchomienie — przekieruj do kreatora konfiguracji ──
+if (!file_exists(__DIR__ . '/.env')) {
+    header('Location: /setup.php');
+    exit;
+}
+
 // ── DEBUG: ?reset=1 czyści sesję (tymczasowe) ────────────────
 if(isset($_GET['reset'])) { session_destroy(); header('Location: /'); exit; }
 
@@ -27,19 +33,17 @@ function requireAuth() {
 //  Plik: index.php  |  Baza: gsibwndbiu_magazyn_gps
 // ══════════════════════════════════════════════════════════════════
 
-// Załaduj zmienne środowiskowe z pliku .env (jeśli istnieje)
-if (file_exists(__DIR__ . '/.env')) {
-    $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $trimmed = trim($line);
-        if ($trimmed === '' || $trimmed[0] === '#') continue;
-        if (strpos($trimmed, '=') === false) continue;
-        [$envKey, $envVal] = explode('=', $trimmed, 2);
-        $envKey = trim($envKey);
-        // Strip inline comments (e.g. VALUE=foo # comment)
-        $envVal = trim(preg_replace('/#.*$/', '', $envVal));
-        if ($envKey !== '') $_ENV[$envKey] = $envVal;
-    }
+// Załaduj zmienne środowiskowe z pliku .env
+$lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+foreach ($lines as $line) {
+    $trimmed = trim($line);
+    if ($trimmed === '' || $trimmed[0] === '#') continue;
+    if (strpos($trimmed, '=') === false) continue;
+    [$envKey, $envVal] = explode('=', $trimmed, 2);
+    $envKey = trim($envKey);
+    // Strip inline comments (e.g. VALUE=foo # comment)
+    $envVal = trim(preg_replace('/#.*$/', '', $envVal));
+    if ($envKey !== '') $_ENV[$envKey] = $envVal;
 }
 
 $DSN  = 'mysql:host=' . ($_ENV['DB_HOST'] ?? 'localhost') . ';dbname=' . ($_ENV['DB_NAME'] ?? '') . ';charset=' . ($_ENV['DB_CHARSET'] ?? 'utf8mb4');

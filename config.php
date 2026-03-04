@@ -4,18 +4,22 @@
 // ═══════════════════════════════════════════════
 
 // Załaduj zmienne środowiskowe z pliku .env (jeśli istnieje)
-if (file_exists(__DIR__ . '/.env')) {
-    $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $trimmed = trim($line);
-        if ($trimmed === '' || $trimmed[0] === '#') continue;
-        if (strpos($trimmed, '=') === false) continue;
-        [$key, $value] = explode('=', $trimmed, 2);
-        $key   = trim($key);
-        // Strip inline comments (e.g. VALUE=foo # comment)
-        $value = trim(preg_replace('/#.*$/', '', $value));
-        if ($key !== '') $_ENV[$key] = $value;
-    }
+if (!file_exists(__DIR__ . '/.env')) {
+    // Pierwsze uruchomienie — przekieruj do kreatora konfiguracji
+    header('Location: /setup.php');
+    exit;
+}
+
+$lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+foreach ($lines as $line) {
+    $trimmed = trim($line);
+    if ($trimmed === '' || $trimmed[0] === '#') continue;
+    if (strpos($trimmed, '=') === false) continue;
+    [$key, $value] = explode('=', $trimmed, 2);
+    $key   = trim($key);
+    // Strip inline comments (e.g. VALUE=foo # comment)
+    $value = trim(preg_replace('/#.*$/', '', $value));
+    if ($key !== '') $_ENV[$key] = $value;
 }
 
 define('DB_HOST',    $_ENV['DB_HOST']    ?? 'localhost');
