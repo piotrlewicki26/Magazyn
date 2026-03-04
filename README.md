@@ -48,15 +48,46 @@ katalog_aplikacji/
 
 ### 1. Pobierz pliki aplikacji
 
-```bash
-# Opcja A — GitHub (SSH)
-git clone git@github.com:piotrlewicki26/Magazyn.git
+Wybierz jedną z metod poniżej. **Metoda A (ZIP)** jest najprostsza i nie wymaga żadnych narzędzi.
 
-# Opcja B — GitHub (HTTPS)
+---
+
+#### 📦 Metoda A — pobierz ZIP ze strony GitHub (zalecana dla początkujących)
+
+1. Otwórz stronę repozytorium w przeglądarce:  
+   **[https://github.com/piotrlewicki26/Magazyn](https://github.com/piotrlewicki26/Magazyn)**
+
+2. Kliknij zielony przycisk **`<> Code`** (górny prawy róg listy plików)
+
+3. Z rozwiniętego menu wybierz **`Download ZIP`**
+
+4. Przeglądarka pobierze plik **`Magazyn-main.zip`** (lub podobna nazwa)
+
+5. Rozpakuj pobrany plik ZIP:
+   - **Windows:** kliknij prawym na plik → *Wyodrębnij wszystko…*
+   - **macOS:** kliknij dwukrotnie na plik ZIP
+   - **Linux:**
+     ```bash
+     unzip Magazyn-main.zip
+     ```
+
+6. Po rozpakowaniu powstanie folder `Magazyn-main/` z wszystkimi plikami aplikacji — to jest to, co wgrywasz na serwer.
+
+---
+
+#### 🖥️ Metoda B — git clone (wymaga zainstalowanego Git)
+
+```bash
+# przez HTTPS (nie wymaga konta GitHub)
 git clone https://github.com/piotrlewicki26/Magazyn.git
 
-# Opcja C — pobierz ZIP ze strony GitHub i rozpakuj
+# przez SSH (wymaga skonfigurowanego klucza SSH)
+git clone git@github.com:piotrlewicki26/Magazyn.git
 ```
+
+> 💡 Git możesz pobrać ze strony **[https://git-scm.com/downloads](https://git-scm.com/downloads)** (Windows/macOS/Linux).
+
+---
 
 ### 2. Wgraj pliki na serwer
 
