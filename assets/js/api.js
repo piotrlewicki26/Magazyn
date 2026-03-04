@@ -57,7 +57,7 @@ function fmtDate(s) {
         const d = new Date(s);
         if (isNaN(d.getTime())) return s;
         return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    } catch (e) { return s; }
+    } catch (e) { console.warn('Błąd formatowania daty:', e); return s; }
 }
 
 /**
@@ -74,7 +74,7 @@ function fmtDateTime(s) {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
-    } catch (e) { return s; }
+    } catch (e) { console.warn('Błąd formatowania daty i czasu:', e); return s; }
 }
 
 // ─── LOADER ──────────────────────────────────────────────────────────────────

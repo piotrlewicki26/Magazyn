@@ -140,9 +140,9 @@
         })
         .then(function (data) {
           if (data.ok) {
-            /* Sukces — przeładuj stronę */
+            /* Sukces — przekieruj na stronę główną */
             btnEl.textContent = '✔ Przekierowuję…';
-            location.reload();
+            window.location.href = '/';
           } else {
             showError(data.error || 'Nieprawidłowy login lub hasło.');
             btnEl.disabled    = false;

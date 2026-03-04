@@ -1,0 +1,32 @@
+# Pliki logów (generowane automatycznie)
+logs/*.log
+logs/*.old
+
+# Pliki konfiguracyjne z hasłami (nie commituj!)
+# config.php zawiera hasła - komentuj linię poniżej tylko jeśli używasz zmiennych środowiskowych
+# config.php
+
+# Backupy bazy danych
+*.sql.gz
+*.sql.bak
+
+# Pliki tymczasowe
+*.tmp
+*.swp
+*~
+
+# IDE / edytory
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System operacyjny
+.DS_Store
+Thumbs.db
+
+# Composer (jeśli dodany)
+vendor/
+
+# Node modules (jeśli dodane)
+node_modules/
