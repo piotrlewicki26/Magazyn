@@ -315,7 +315,8 @@ input::placeholder{color:rgba(255,255,255,.25)}
 <div class="success-icon">✅</div>
 <h2>Konfiguracja zakończona!</h2>
 <p class="sub">Plik <code>.env</code> został zapisany, baza danych zainicjowana
-  i konto administratora utworzone.<br>Możesz teraz zalogować się do aplikacji.</p>
+  i konto administratora utworzone.<br>
+  Zaloguj się używając <strong style="color:#7aa7ff">adresu email</strong> i hasła podanego powyżej.</p>
 <a class="btn-goto" href="/">🚀 Przejdź do aplikacji</a>
 
 <?php else: ?>

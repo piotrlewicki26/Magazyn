@@ -26,8 +26,9 @@ Options -MultiViews
   RewriteEngine On
   RewriteBase /
 
-  # Redirect to HTTPS
+  # Redirect to HTTPS (also handles reverse proxies / load balancers via X-Forwarded-Proto)
   RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
   # Don't rewrite files or directories

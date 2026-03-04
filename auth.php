@@ -6,6 +6,7 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/config.php';
 setSecurityHeaders();
 
 // ── Sesja ────────────────────────────────────────
@@ -444,4 +445,18 @@ function handleAuthRequests(): void {
         exit;
     }
 
+}
+
+// ═══════════════════════════════════════════════
+//  PUNKT WEJŚCIA — wykonywany tylko gdy auth.php
+//  jest uruchamiane bezpośrednio jako strona
+// ═══════════════════════════════════════════════
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    initDB();
+    seedAdmin(getDB());
+    handleAuthRequests();
+    requireAuth();
+    // Zalogowany — przekieruj do aplikacji głównej
+    header('Location: /');
+    exit;
 }

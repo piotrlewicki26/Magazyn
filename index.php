@@ -1866,9 +1866,9 @@ if(!$logged):
       <div class="fl-login-sub">Magazyn urządzeń GPS — Panel logowania</div>
     </div>
     <div class="fl-login-field">
-      <label class="fl-login-label">Login</label>
+      <label class="fl-login-label">Email / Login</label>
       <input class="fl-login-input" id="fl-login-input" type="text"
-             placeholder="Wpisz login" autocomplete="username"
+             placeholder="Wpisz email lub login" autocomplete="username"
              onkeydown="if(event.key==='Enter') document.getElementById('fl-pass-input').focus()">
     </div>
     <div class="fl-login-field">

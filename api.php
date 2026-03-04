@@ -4,6 +4,8 @@
 // ═══════════════════════════════════════════════
 
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
 
 function handleApi(): void {
     header('Content-Type: application/json; charset=utf-8');
@@ -437,4 +439,14 @@ function handleApi(): void {
 
 function saveUndo(string $type, string $label, array $rows, array $newIds=[]): void {
     $_SESSION['undo'] = ['type'=>$type,'label'=>$label,'rows'=>$rows,'new_ids'=>$newIds,'ts'=>time()];
+}
+
+// ── Punkt wejścia ────────────────────────────────
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    if (isset($_GET['api'])) {
+        handleApi();
+    } else {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'Brak parametru api']);
+    }
 }
