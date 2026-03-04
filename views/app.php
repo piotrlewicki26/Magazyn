@@ -682,7 +682,7 @@
             <input type="password" id="cp-current" autocomplete="current-password" placeholder="••••••••">
           </div>
           <div class="mz-field">
-            <label>Nowe hasło <span style="color:rgba(255,255,255,.3);font-size:10px;">(min. 6 znaków)</span></label>
+            <label>Nowe hasło <span style="color:rgba(255,255,255,.3);font-size:10px;">(min. 8 znaków)</span></label>
             <input type="password" id="cp-new" autocomplete="new-password" placeholder="••••••••">
           </div>
           <div class="mz-field">
@@ -1099,7 +1099,7 @@
         <div class="mz-field-row">
           <div class="mz-field">
             <label id="au-pass-label">
-              Hasło * <span style="color:rgba(255,255,255,.3);font-size:10px;">(min. 6)</span>
+              Hasło * <span style="color:rgba(255,255,255,.3);font-size:10px;">(min. 8)</span>
             </label>
             <input
               type="password"
