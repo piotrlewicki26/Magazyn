@@ -1,9 +1,15 @@
 Options -Indexes
 Options -MultiViews
 
-# Prevent direct access to config and sensitive files
-<FilesMatch "^(config|install)\.php$">
-  # Allow access (install needs to be run once, then delete)
+# Block direct access to sensitive files
+<FilesMatch "^\.env|^\.env\..*|^.*\.log$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
 </FilesMatch>
 
 # Security headers
